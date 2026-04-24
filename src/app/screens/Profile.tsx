@@ -5,7 +5,7 @@ import { api, USERS } from '../utils/api';
 import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 type UserProfile = {
   name: string;

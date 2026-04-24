@@ -3,7 +3,7 @@ import { Card, Button, Badge, cn } from '../components/ui/WireframeComponents';
 import { ChevronRight, TrendingUp, AlertCircle, Shield, Loader2, Zap, ArrowRight, CheckCircle2, AlertTriangle, Calendar, FileText } from 'lucide-react';
 import { api, USERS } from '../utils/api';
 import { motion } from 'motion/react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 type User = {
   name: string;

@@ -3,7 +3,7 @@ import { Shield, Lock, ChevronRight, CheckCircle, Loader2, CreditCard } from 'lu
 import { Button, Card } from '../components/ui/WireframeComponents';
 import { motion, AnimatePresence } from 'motion/react';
 import { api, USERS } from '../utils/api';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 interface OnboardingProps {
   onComplete: () => void;

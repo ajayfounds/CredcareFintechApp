@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, Badge, Button, cn } from '../components/ui/WireframeComponents';
 import { BookOpen, Clock, ChevronRight, ChevronLeft, Search, PlayCircle, Bookmark, Share2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 
 type Article = {
   id: string;
