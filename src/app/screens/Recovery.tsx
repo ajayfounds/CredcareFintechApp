@@ -3,7 +3,7 @@ import { Card, Button, Badge, cn } from '../components/ui/WireframeComponents';
 import { ChevronLeft, Calendar, AlertTriangle, CheckCircle, Info, ArrowRight, Loader2, ChevronRight } from 'lucide-react';
 import { api, USERS } from '../utils/api';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from "sonner";
+import { toast } from "sonner@2.0.3";
 
 type ViewState = 'main' | 'timeline' | 'roadmap-detail';
 

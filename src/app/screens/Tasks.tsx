@@ -18,7 +18,7 @@ import {
   Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toast } from "sonner";
+import { toast } from "sonner@2.0.3";
 import {
   Drawer,
   DrawerContent,
