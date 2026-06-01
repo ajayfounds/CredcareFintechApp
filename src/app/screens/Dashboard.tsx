@@ -191,9 +191,9 @@ export const Dashboard = ({ onChangeTab }: { onChangeTab: (tab: any) => void }) 
 
              {/* Visual Ring Indicator */}
              <div className="relative w-24 h-12 overflow-hidden flex items-end justify-center mb-1">
-                <div className="w-20 h-20 rounded-full border-[6px] border-gray-100 absolute -bottom-10" />
-                <div 
-                    className="w-20 h-20 rounded-full border-[6px] border-indigo-500 absolute -bottom-10 border-l-transparent border-b-transparent border-r-transparent transition-all duration-1000 ease-out"
+                <div className="w-20 h-20 rounded-full border-[6px] border-indigo-500 absolute -bottom-10" />
+                <div
+                    className="w-20 h-20 rounded-full border-[6px] border-gray-100 absolute -bottom-10 border-l-transparent border-b-transparent border-r-transparent transition-all duration-1000 ease-out"
                     style={{ transform: `rotate(${(user?.creditScore! / 900) * 180 - 45}deg)` }}
                 />
              </div>
