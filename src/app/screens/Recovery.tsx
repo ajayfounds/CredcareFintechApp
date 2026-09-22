@@ -34,6 +34,9 @@ export const Recovery = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        // Idempotent backfill: ensures insights/tasks exist for users
+        // seeded before these keys were introduced.
+        await api.post(`/seed/${USERS.CURRENT_USER_ID}`, {});
         const [insightsData, tasksData] = await Promise.all([
           api.get(`/insights/${USERS.CURRENT_USER_ID}`),
           api.get(`/tasks/${USERS.CURRENT_USER_ID}`)

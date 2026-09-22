@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
+
 const app = new Hono();
 
 // Enable logger
@@ -19,120 +20,250 @@ app.use(
   }),
 );
 
-// Health check endpoint
-app.get("/make-server-007fe701/health", (c) => {
+// Types (Mirrors the frontend types)
+type User = {
+  id: string; // Added ID to user
+  name: string;
+  creditScore: number;
+  scoreStatus: 'Needs Work' | 'Fair' | 'Good' | 'Excellent';
+  lastUpdated: string;
+  monthlyIncome: number;
+};
+
+type Task = {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  status: 'pending' | 'completed' | 'missed';
+  category: 'payment' | 'document' | 'education' | 'action';
+  impact: 'high' | 'medium' | 'low';
+};
+
+type Loan = {
+  id: string;
+  lender: string;
+  type: 'Personal Loan' | 'Credit Card' | 'Consumer Durable';
+  amountDue: number;
+  dueDate: string;
+  status: 'ontime' | 'overdue' | 'closed';
+  missedPayments: number;
+};
+
+type Insight = {
+  id: string;
+  title: string;
+  description: string;
+  type: 'negative' | 'positive' | 'neutral';
+  date: string;
+};
+
+const BASE_PATH = "/make-server-007fe701";
+
+// Mock Data for Seeding
+const MOCK_USER: User = {
+  id: "user_123",
+  name: "Arjun",
+  creditScore: 624,
+  scoreStatus: 'Needs Work',
+  lastUpdated: "2 Feb 2026",
+  monthlyIncome: 35000,
+};
+
+const MOCK_LOANS: Loan[] = [
+  {
+    id: 'l1',
+    lender: 'HDFC Bank',
+    type: 'Personal Loan',
+    amountDue: 4500,
+    dueDate: '2026-02-05',
+    status: 'ontime',
+    missedPayments: 1
+  },
+  {
+    id: 'l2',
+    lender: 'SBI Card',
+    type: 'Credit Card',
+    amountDue: 12000,
+    dueDate: '2026-02-10',
+    status: 'ontime',
+    missedPayments: 0
+  },
+  {
+    id: 'l3',
+    lender: 'Bajaj Finserv',
+    type: 'Consumer Durable',
+    amountDue: 1999,
+    dueDate: '2026-01-15',
+    status: 'overdue',
+    missedPayments: 1
+  }
+];
+
+const MOCK_TASKS: Task[] = [
+  {
+    id: 't1',
+    title: 'Pay Bajaj Overdue',
+    description: 'Clear the ₹1,999 pending amount to stop further score damage.',
+    dueDate: 'Today',
+    status: 'pending',
+    category: 'payment',
+    impact: 'high'
+  },
+  {
+    id: 't2',
+    title: 'Enable Auto-Pay for HDFC',
+    description: 'Avoid accidental misses by setting up auto-debit for your loan.',
+    dueDate: '2026-02-04',
+    status: 'pending',
+    category: 'action',
+    impact: 'medium'
+  },
+  {
+    id: 't3',
+    title: 'Read: "How Interest Accumulates"',
+    description: 'Understand why delaying payments costs more than just late fees.',
+    dueDate: '2026-02-06',
+    status: 'pending',
+    category: 'education',
+    impact: 'low'
+  }
+];
+
+const MOCK_INSIGHTS: Insight[] = [
+  {
+    id: '1',
+    title: 'Missed Payment Impact',
+    description: 'Your score dropped by 42 points due to a missed HDFC EMI in December.',
+    type: 'negative',
+    date: 'Dec 2025'
+  },
+  {
+    id: '2',
+    title: 'High Utilization',
+    description: 'Your SBI Card utilization is at 85%. Ideally, it should be below 30%.',
+    type: 'negative',
+    date: 'Jan 2026'
+  },
+  {
+    id: '3',
+    title: 'Credit Age',
+    description: 'Your credit history is 1 year old. Keep accounts open to improve this.',
+    type: 'neutral',
+    date: 'Jan 2026'
+  }
+];
+
+
+// Tolerant parse: the kv store holds JSONB, so historically values were
+// written both as raw objects and as JSON strings. Handle both.
+const parse = (data: any) => {
+  if (data === null || data === undefined) return null;
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return data;
+    }
+  }
+  return data;
+};
+
+// Routes
+app.get(`${BASE_PATH}/health`, (c) => {
   return c.json({ status: "ok" });
 });
 
-// Seed user data endpoint
-app.post("/make-server-007fe701/seed/:userId", async (c) => {
-  try {
-    const userId = c.req.param("userId");
-    console.log(`Seeding data for user: ${userId}`);
+// Seed Data (Safe Idempotent) — backfills any missing keys
+app.post(`${BASE_PATH}/seed/:userId`, async (c) => {
+  const userId = c.req.param("userId");
 
-    // Seed user data
-    const userData = {
-      name: "Rahul",
-      creditScore: 624,
-      scoreStatus: "Needs Work",
-      lastUpdated: "Just now"
-    };
-    await kv.set(`user:${userId}`, userData);
-    console.log(`User data seeded for ${userId}`);
+  const existingUser = await kv.get(`user:${userId}`);
+  const seeded: string[] = [];
 
-    // Seed tasks data
-    const tasksData = [
-      {
-        id: '1',
-        title: "Pay HDFC Credit Card",
-        description: "Minimum due payment to avoid late fees. This will positively impact your payment history.",
-        dueDate: "Today",
-        status: "pending",
-        category: "payment",
-        impact: "high",
-        amount: 15400,
-        provider: "HDFC Bank"
-      },
-      {
-        id: '2',
-        title: "Upload Income Proof",
-        description: "Update your income details to increase credit limit eligibility. Please provide your latest payslip.",
-        dueDate: "Tomorrow",
-        status: "pending",
-        category: "document",
-        impact: "medium",
-        documentType: "Payslip / IT Return"
-      },
-      {
-        id: '3',
-        title: "Dispute CIBIL Error",
-        description: "You flagged an unknown loan inquiry. Review the dispute form before submission.",
-        dueDate: "Fri, Feb 14",
-        status: "pending",
-        category: "review",
-        impact: "high"
-      },
-      {
-        id: '4',
-        title: "Setup Auto-pay",
-        description: "Never miss a payment by enabling auto-debit for your SBI Loan.",
-        dueDate: "Next Week",
-        status: "pending",
-        category: "generic",
-        impact: "medium"
-      },
-      {
-        id: '5',
-        title: "Verify Email",
-        description: "Complete your profile verification.",
-        dueDate: "Past",
-        status: "completed",
-        category: "generic",
-        impact: "low"
-      }
-    ];
-    await kv.set(`tasks:${userId}`, tasksData);
-    console.log(`Tasks data seeded for ${userId}`);
-
-    return c.json({ success: true, message: "Data seeded successfully" });
-  } catch (err) {
-    console.error("Error seeding data:", err);
-    return c.json({ success: false, error: err.message }, 500);
+  if (!existingUser) {
+    await kv.set(`user:${userId}`, JSON.stringify({ ...MOCK_USER, id: userId }));
+    seeded.push("user");
   }
+  if (!(await kv.get(`loans:${userId}`))) {
+    await kv.set(`loans:${userId}`, JSON.stringify(MOCK_LOANS));
+    seeded.push("loans");
+  }
+  if (!(await kv.get(`tasks:${userId}`))) {
+    await kv.set(`tasks:${userId}`, JSON.stringify(MOCK_TASKS));
+    seeded.push("tasks");
+  }
+  if (!(await kv.get(`insights:${userId}`))) {
+    await kv.set(`insights:${userId}`, JSON.stringify(MOCK_INSIGHTS));
+    seeded.push("insights");
+  }
+
+  return c.json({ message: "Seed complete", seeded });
 });
 
-// Get user data endpoint
-app.get("/make-server-007fe701/user/:userId", async (c) => {
-  try {
-    const userId = c.req.param("userId");
-    const userData = await kv.get(`user:${userId}`);
-
-    if (!userData) {
-      return c.json({ error: "User not found" }, 404);
-    }
-
-    return c.json(userData);
-  } catch (err) {
-    console.error("Error fetching user data:", err);
-    return c.json({ error: err.message }, 500);
-  }
+// Get User
+app.get(`${BASE_PATH}/user/:userId`, async (c) => {
+  const userId = c.req.param("userId");
+  const data = await kv.get(`user:${userId}`);
+  if (!data) return c.json({ error: "User not found" }, 404);
+  return c.json(parse(data));
 });
 
-// Get tasks endpoint
-app.get("/make-server-007fe701/tasks/:userId", async (c) => {
-  try {
-    const userId = c.req.param("userId");
-    const tasksData = await kv.get(`tasks:${userId}`);
-
-    if (!tasksData) {
-      return c.json([]);
-    }
-
-    return c.json(tasksData);
-  } catch (err) {
-    console.error("Error fetching tasks data:", err);
-    return c.json({ error: err.message }, 500);
+// Create/Update User (Onboarding)
+app.post(`${BASE_PATH}/user/:userId`, async (c) => {
+  const userId = c.req.param("userId");
+  const body = await c.req.json();
+  
+  // Merge with existing or create new
+  const existingStr = await kv.get(`user:${userId}`);
+  const existing = existingStr ? parse(existingStr) : { id: userId, creditScore: 600, scoreStatus: 'Fair', lastUpdated: new Date().toLocaleDateString() };
+  
+  const updated = { ...existing, ...body };
+  await kv.set(`user:${userId}`, JSON.stringify(updated));
+  
+  // If new user, also seed default data if empty
+  const tasks = await kv.get(`tasks:${userId}`);
+  if (!tasks) {
+     await kv.set(`loans:${userId}`, JSON.stringify(MOCK_LOANS));
+     await kv.set(`tasks:${userId}`, JSON.stringify(MOCK_TASKS));
+     await kv.set(`insights:${userId}`, JSON.stringify(MOCK_INSIGHTS));
   }
+
+  return c.json(updated);
+});
+
+// Get Loans
+app.get(`${BASE_PATH}/loans/:userId`, async (c) => {
+  const userId = c.req.param("userId");
+  const data = await kv.get(`loans:${userId}`);
+  return c.json(parse(data) ?? []);
+});
+
+// Get Tasks
+app.get(`${BASE_PATH}/tasks/:userId`, async (c) => {
+  const userId = c.req.param("userId");
+  const data = await kv.get(`tasks:${userId}`);
+  return c.json(parse(data) ?? []);
+});
+
+// Update Task Status
+app.post(`${BASE_PATH}/tasks/:userId/:taskId/complete`, async (c) => {
+  const { userId, taskId } = c.req.param();
+  const data = await kv.get(`tasks:${userId}`);
+  if (!data) return c.json({ error: "No tasks found" }, 404);
+
+  const tasks: Task[] = parse(data);
+  const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t);
+  
+  await kv.set(`tasks:${userId}`, JSON.stringify(updatedTasks));
+  return c.json(updatedTasks);
+});
+
+// Get Insights
+app.get(`${BASE_PATH}/insights/:userId`, async (c) => {
+  const userId = c.req.param("userId");
+  const data = await kv.get(`insights:${userId}`);
+  return c.json(parse(data) ?? []);
 });
 
 Deno.serve(app.fetch);
